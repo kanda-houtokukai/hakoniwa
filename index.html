@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>箱庭</title>
+<style>
+  :root {
+    --paper: #f2ede1;
+    --pot: #a17f55;
+    --pot-dark: #7f6140;
+    --soil: #3b2e22;
+    --leaf: #4f6b47;
+    --leaf-light: #6f8f60;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: var(--paper);
+  }
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .scene {
+    width: min(90vw, 480px);
+    height: auto;
+    display: block;
+  }
+  .sprout {
+    transform-origin: 150px 210px;
+    animation: sway 6s ease-in-out infinite alternate;
+  }
+  @keyframes sway {
+    from { transform: rotate(-1.2deg); }
+    to   { transform: rotate(1.2deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .sprout { animation: none; }
+  }
+</style>
+</head>
+<body>
+<svg class="scene" viewBox="0 0 300 260" xmlns="http://www.w3.org/2000/svg">
+  <path d="M90 210 L210 210 L195 250 L105 250 Z" fill="var(--pot)" />
+  <path d="M90 210 L210 210 L206 220 L94 220 Z" fill="var(--pot-dark)" />
+  <ellipse cx="150" cy="211" rx="60" ry="8" fill="var(--soil)" />
+  <g class="sprout">
+    <path d="M150 210 C148 190 152 175 150 158" stroke="var(--leaf)" stroke-width="3" fill="none" stroke-linecap="round" />
+    <path d="M150 172 C138 168 128 158 126 146 C140 148 150 156 150 172 Z" fill="var(--leaf-light)" />
+    <path d="M150 168 C162 162 170 150 171 138 C158 142 150 152 150 168 Z" fill="var(--leaf)" />
+  </g>
+</svg>
+</body>
+</html>
