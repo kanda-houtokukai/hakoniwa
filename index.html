@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>箱庭 - デジタル盆栽</title>
+<meta name="description" content="AIの庭師が毎日少しずつ育てる、一本のデジタル盆栽。">
+<!-- GROWTH_STAGE: 1 (種、発芽) -->
+<style>
+  :root {
+    --sky-top: #f3ede1;
+    --sky-bottom: #e8dcc8;
+    --pot-body: #a8674a;
+    --pot-shadow: #8a5038;
+    --soil: #4a3728;
+    --soil-dark: #372a1f;
+    --sprout: #6b8f4e;
+    --sprout-light: #8bab68;
+    --ink: #2e2a24;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-bottom) 100%);
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+    color: var(--ink);
+  }
+
+  .stage {
+    width: min(90vw, 420px);
+  }
+
+  .caption {
+    margin-top: 1.25rem;
+    text-align: center;
+    font-size: 0.85rem;
+    letter-spacing: 0.15em;
+    color: var(--ink);
+    opacity: 0.55;
+  }
+
+  .caption .day {
+    display: block;
+    font-size: 0.7rem;
+    margin-top: 0.35rem;
+    letter-spacing: 0.2em;
+    opacity: 0.7;
+  }
+
+  .sprout-group {
+    transform-origin: 200px 245px;
+    animation: sway 6s ease-in-out infinite;
+  }
+
+  @keyframes sway {
+    0%, 100% { transform: rotate(-1.2deg); }
+    50% { transform: rotate(1.2deg); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sprout-group { animation: none; }
+  }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <svg viewBox="0 0 400 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="植木鉢に植えられたばかりの、双葉の芽">
+      <!-- 鉢 -->
+      <path d="M 130 250 L 270 250 L 250 300 L 150 300 Z" fill="var(--pot-body)" />
+      <path d="M 150 300 L 250 300 L 246 310 L 154 310 Z" fill="var(--pot-shadow)" />
+      <rect x="120" y="240" width="160" height="14" rx="4" fill="var(--pot-shadow)" />
+
+      <!-- 土 -->
+      <ellipse cx="200" cy="248" rx="72" ry="12" fill="var(--soil)" />
+      <ellipse cx="200" cy="246" rx="60" ry="8" fill="var(--soil-dark)" />
+
+      <!-- 発芽 -->
+      <g class="sprout-group">
+        <path d="M 200 246 C 198 225 199 208 200 195" stroke="var(--sprout)" stroke-width="4" fill="none" stroke-linecap="round" />
+        <path d="M 200 210 C 186 202 176 205 168 216 C 180 220 192 217 200 210 Z" fill="var(--sprout-light)" />
+        <path d="M 200 210 C 214 202 224 205 232 216 C 220 220 208 217 200 210 Z" fill="var(--sprout)" />
+      </g>
+    </svg>
+    <p class="caption">
+      箱庭 — デジタル盆栽
+      <span class="day">day 1 ・ 種を植えた</span>
+    </p>
+  </div>
+</body>
+</html>
