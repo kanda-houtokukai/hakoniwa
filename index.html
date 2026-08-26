@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>箱庭</title>
+<style>
+  :root {
+    --soil-dark: #4a3728;
+    --soil-light: #6b4f38;
+    --stem: #4f7942;
+    --leaf: #5c9a4a;
+    --leaf-light: #78b568;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    height: 100%;
+    margin: 0;
+  }
+  body {
+    display: flex;
+    flex-direction: column;
+    font-family: -apple-system, "Hiragino Sans", "Yu Gothic", sans-serif;
+    overflow: hidden;
+  }
+  #sky {
+    flex: 1;
+    position: relative;
+    transition: background 60s linear;
+  }
+  #stars {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 3s ease;
+  }
+  #stars.visible { opacity: 1; }
+  .star {
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    background: #fff;
+    border-radius: 50%;
+    animation: twinkle 3s ease-in-out infinite;
+  }
+  @keyframes twinkle {
+    0%, 100% { opacity: 0.2; }
+    50% { opacity: 1; }
+  }
+  #ground {
+    height: 22vh;
+    min-height: 120px;
+    background: linear-gradient(180deg, var(--soil-light) 0%, var(--soil-dark) 100%);
+    position: relative;
+    flex-shrink: 0;
+  }
+  #ground::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 6px;
+    background: repeating-linear-gradient(
+      90deg,
+      rgba(0,0,0,0.08) 0px,
+      rgba(0,0,0,0.08) 2px,
+      transparent 2px,
+      transparent 10px
+    );
+  }
+  #plant-wrap {
+    position: absolute;
+    bottom: 22vh;
+    left: 50%;
+    transform: translateX(-50%);
+    transform-origin: bottom center;
+    animation: sway 6s ease-in-out infinite;
+  }
+  @keyframes sway {
+    0%, 100% { transform: translateX(-50%) rotate(-1.2deg); }
+    50% { transform: translateX(-50%) rotate(1.2deg); }
+  }
+  #plant-svg { display: block; overflow: visible; }
+  .seed-mound {
+    fill: var(--soil-dark);
+  }
+  footer {
+    flex-shrink: 0;
+    text-align: center;
+    font-size: 11px;
+    color: #999;
+    padding: 6px 0;
+    background: #1a1a1a;
+    letter-spacing: 0.05em;
+  }
+  footer a { color: #999; }
+</style>
+</head>
+<body>
+<div id="sky">
+  <div id="stars"></div>
+  <div id="plant-wrap">
+    <svg id="plant-svg" width="120" height="140" viewBox="0 0 120 140"></svg>
+  </div>
+</div>
+<div id="ground"></div>
+<footer>箱庭 &mdash; <span id="day-label"></span></footer>
+
+<script>
+// 種を植えた日。庭師が変わることはないが、日数はここから自動的に進む。
+const PLANTED_DATE = new Date('2026-08-26T00:00:00');
+
+function daysSincePlanted() {
+  const now = new Date();
+  const plantedMidnight = new Date(PLANTED_DATE.getFullYear(), PLANTED_DATE.getMonth(), PLANTED_DATE.getDate());
+  const nowMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.round((nowMidnight - plantedMidnight) / 86400000);
+}
+
+// 空: 時刻に応じて色を変える(外部APIは使わず、端末のローカル時刻のみ参照)
+function updateSky() {
+  const hour = new Date().getHours();
+  const sky = document.getElementById('sky');
+  const stars = document.getElementById('stars');
+  let gradient;
+  let showStars = false;
+  if (hour >= 5 && hour < 7) {
+    gradient = 'linear-gradient(180deg, #2b3a67 0%, #e8956f 55%, #f6c89f 100%)';
+  } else if (hour >= 7 && hour < 17) {
+    gradient = 'linear-gradient(180deg, #6ec3e0 0%, #bfe6f0 70%, #eaf7f0 100%)';
+  } else if (hour >= 17 && hour < 19) {
+    gradient = 'linear-gradient(180deg, #3b3a6e 0%, #c9587a 55%, #f0a35f 100%)';
+  } else {
+    gradient = 'linear-gradient(180deg, #0b0f2b 0%, #1c2450 60%, #2b2f5e 100%)';
+    showStars = true;
+  }
+  sky.style.background = gradient;
+  stars.classList.toggle('visible', showStars);
+  if (showStars && !stars.dataset.filled) {
+    stars.dataset.filled = '1';
+    for (let i = 0; i < 40; i++) {
+      const s = document.createElement('div');
+      s.className = 'star';
+      s.style.left = Math.random() * 100 + '%';
+      s.style.top = Math.random() * 70 + '%';
+      s.style.animationDelay = (Math.random() * 3) + 's';
+      stars.appendChild(s);
+    }
+  }
+}
+
+// 植物: 経過日数だけで成長段階が決まる。庭師が触らなくても時間とともに育つ。
+function renderPlant() {
+  const days = daysSincePlanted();
+  const svg = document.getElementById('plant-svg');
+  const ns = 'http://www.w3.org/2000/svg';
+  svg.innerHTML = '';
+
+  const stage =
+    days <= 0 ? 0 :
+    days <= 2 ? 1 :
+    days <= 6 ? 2 :
+    days <= 13 ? 3 : 4;
+
+  // 土のふくらみ(種)
+  const mound = document.createElementNS(ns, 'ellipse');
+  mound.setAttribute('cx', '60');
+  mound.setAttribute('cy', '136');
+  mound.setAttribute('rx', '16');
+  mound.setAttribute('ry', '5');
+  mound.setAttribute('class', 'seed-mound');
+  svg.appendChild(mound);
+
+  if (stage === 0) {
+    document.getElementById('day-label').textContent = '種を植えた日';
+    return;
+  }
+
+  const stemHeight = [0, 22, 55, 90, 128][stage];
+  const leafPairs = [0, 1, 2, 3, 4][stage];
+  const baseX = 60, baseY = 136;
+  const topY = baseY - stemHeight;
+
+  // 茎
+  const stem = document.createElementNS(ns, 'path');
+  const ctrlX = baseX + (stage % 2 === 0 ? 6 : -6);
+  stem.setAttribute('d', `M ${baseX} ${baseY} Q ${ctrlX} ${(baseY + topY) / 2} ${baseX} ${topY}`);
+  stem.setAttribute('stroke', 'var(--stem)');
+  stem.setAttribute('stroke-width', '3');
+  stem.setAttribute('fill', 'none');
+  stem.setAttribute('stroke-linecap', 'round');
+  svg.appendChild(stem);
+
+  // 葉(対生・段ごとに増える)
+  for (let i = 0; i < leafPairs; i++) {
+    const t = (i + 1) / (leafPairs + 0.5);
+    const y = baseY - stemHeight * t;
+    const size = 10 + i * 2;
+    [-1, 1].forEach((side) => {
+      const leaf = document.createElementNS(ns, 'path');
+      const x = baseX;
+      const cx = x + side * size * 1.6;
+      const cy = y - size * 0.3;
+      leaf.setAttribute('d', `M ${x} ${y} Q ${cx} ${cy - size * 0.6} ${x + side * size * 2} ${y - 2} Q ${cx} ${cy + size * 0.4} ${x} ${y}`);
+      leaf.setAttribute('fill', i % 2 === 0 ? 'var(--leaf)' : 'var(--leaf-light)');
+      svg.appendChild(leaf);
+    });
+  }
+
+  // 4段目: 頂点に小さな蕾
+  if (stage === 4) {
+    const bud = document.createElementNS(ns, 'circle');
+    bud.setAttribute('cx', baseX);
+    bud.setAttribute('cy', topY - 3);
+    bud.setAttribute('r', '5');
+    bud.setAttribute('fill', '#e39fc2');
+    svg.appendChild(bud);
+  }
+
+  const labels = ['', '芽が出た', '育っている', 'すくすく育っている', '蕾をつけた'];
+  document.getElementById('day-label').textContent = `${labels[stage]}(${days}日目)`;
+}
+
+updateSky();
+renderPlant();
+setInterval(updateSky, 5 * 60 * 1000);
+setInterval(renderPlant, 5 * 60 * 1000);
+</script>
+</body>
+</html>
