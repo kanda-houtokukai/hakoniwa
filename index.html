@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>箱庭</title>
+<meta name="description" content="AIの庭師が毎日少しずつ育てる、一枚のミニチュアガーデン。">
+<style>
+  :root {
+    --sky-top: #8ec9e8;
+    --sky-bottom: #d9f0e0;
+    --box-wood: #a9754f;
+    --box-wood-dark: #8a5c3a;
+    --soil: #5b4636;
+    --soil-dark: #443426;
+    --text: #3a3a34;
+    --star-opacity: 0;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+    color: var(--text);
+  }
+
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: #111;
+    transition: background 2s ease;
+  }
+
+  main {
+    width: min(92vw, 640px);
+  }
+
+  .scene {
+    position: relative;
+    border-radius: 6px;
+    overflow: hidden;
+    background: linear-gradient(to bottom, var(--sky-top) 0%, var(--sky-bottom) 78%);
+    transition: background 2s ease;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.35);
+  }
+
+  .stars {
+    position: absolute;
+    inset: 0;
+    opacity: var(--star-opacity);
+    transition: opacity 2s ease;
+    pointer-events: none;
+  }
+
+  .stars circle { fill: #fff; }
+
+  svg.garden { display: block; width: 100%; height: auto; }
+
+  .sprout {
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+    animation: sway 4.5s ease-in-out infinite;
+  }
+  .sprout.d1 { animation-delay: -0.4s; }
+  .sprout.d2 { animation-delay: -1.7s; }
+  .sprout.d3 { animation-delay: -2.9s; }
+
+  @keyframes sway {
+    0%, 100% { transform: rotate(-2.5deg); }
+    50% { transform: rotate(2.5deg); }
+  }
+
+  footer {
+    margin-top: 14px;
+    text-align: center;
+    color: #cfd3d8;
+    font-size: 0.85rem;
+    line-height: 1.7;
+  }
+
+  footer .status { color: #eef1f4; }
+
+  @media (prefers-color-scheme: light) {
+    body { background: #eef2f0; }
+    footer { color: #4a4f4a; }
+    footer .status { color: var(--text); }
+  }
+</style>
+</head>
+<body>
+<main>
+  <div class="scene">
+    <svg class="stars" viewBox="0 0 400 260" preserveAspectRatio="none" aria-hidden="true"></svg>
+    <svg class="garden" viewBox="0 0 400 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="木箱に植えられた小さな庭">
+      <!-- 木箱 -->
+      <rect x="20" y="150" width="360" height="90" rx="6" fill="var(--box-wood)"></rect>
+      <rect x="20" y="150" width="360" height="14" fill="var(--box-wood-dark)"></rect>
+      <rect x="20" y="226" width="360" height="14" rx="4" fill="var(--box-wood-dark)"></rect>
+      <!-- 土 -->
+      <ellipse cx="200" cy="164" rx="178" ry="16" fill="var(--soil)"></ellipse>
+      <ellipse cx="200" cy="162" rx="178" ry="14" fill="var(--soil-dark)" opacity="0.35"></ellipse>
+      <!-- 植物はここに描画される -->
+      <g id="plantings"></g>
+    </svg>
+  </div>
+  <footer>
+    <p class="status" id="status"></p>
+    <p id="note"></p>
+  </footer>
+</main>
+
+<script>
+  // この庭の生育記録。庭師は毎日ここに一手を書き足していく。
+  const GROWTH_LOG = [
+    { date: "2026-08-27", type: "sprout", x: 200, note: "最初の種をまいた。" }
+  ];
+
+  const PLANT_RENDERERS = {
+    sprout(entry, i) {
+      const x = entry.x;
+      const y = 164;
+      const sway = `sprout d${(i % 3) + 1}`;
+      return `
+        <g class="${sway}">
+          <path d="M ${x} ${y} C ${x} ${y - 14}, ${x} ${y - 14}, ${x} ${y - 24}"
+                stroke="#4f7a3d" stroke-width="3" fill="none" stroke-linecap="round"></path>
+          <path d="M ${x} ${y - 18} C ${x - 4} ${y - 24}, ${x - 16} ${y - 24}, ${x - 20} ${y - 16}
+                   C ${x - 12} ${y - 14}, ${x - 4} ${y - 15}, ${x} ${y - 18} Z"
+                fill="#6fa050"></path>
+          <path d="M ${x} ${y - 20} C ${x + 4} ${y - 27}, ${x + 16} ${y - 26}, ${x + 19} ${y - 18}
+                   C ${x + 11} ${y - 15}, ${x + 4} ${y - 17}, ${x} ${y - 20} Z"
+                fill="#7fb35d"></path>
+        </g>`;
+    }
+  };
+
+  function renderGarden() {
+    const g = document.getElementById("plantings");
+    g.innerHTML = GROWTH_LOG.map((entry, i) => {
+      const renderer = PLANT_RENDERERS[entry.type];
+      return renderer ? renderer(entry, i) : "";
+    }).join("");
+  }
+
+  function renderSky() {
+    const hour = new Date().getHours();
+    const root = document.documentElement.style;
+    let top, bottom, stars;
+
+    if (hour >= 5 && hour < 7) {          // 夜明け
+      top = "#f5b89a"; bottom = "#fde3c8"; stars = 0.15;
+    } else if (hour >= 7 && hour < 17) {  // 昼
+      top = "#8ec9e8"; bottom = "#d9f0e0"; stars = 0;
+    } else if (hour >= 17 && hour < 19) { // 夕暮れ
+      top = "#e0834f"; bottom = "#f6c98a"; stars = 0.25;
+    } else {                              // 夜
+      top = "#0e1a35"; bottom = "#2b3a5c"; stars = 1;
+    }
+    root.setProperty("--sky-top", top);
+    root.setProperty("--sky-bottom", bottom);
+    root.setProperty("--star-opacity", stars);
+  }
+
+  function renderStars() {
+    const svg = document.querySelector(".stars");
+    let out = "";
+    // 種から決定的に星を配置する(見るたびに変わらないように)
+    let seed = 42;
+    const rand = () => {
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+      return (seed % 1000) / 1000;
+    };
+    for (let i = 0; i < 60; i++) {
+      const cx = rand() * 400;
+      const cy = rand() * 140;
+      const r = 0.4 + rand() * 1.1;
+      out += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(2)}" opacity="${(0.4 + rand() * 0.6).toFixed(2)}"></circle>`;
+    }
+    svg.innerHTML = out;
+  }
+
+  function renderStatus() {
+    const first = new Date(GROWTH_LOG[0].date + "T00:00:00");
+    const today = new Date();
+    const days = Math.max(1, Math.floor((today - first) / 86400000) + 1);
+    document.getElementById("status").textContent =
+      `${days}日目の庭。これまでに ${GROWTH_LOG.length} つの命を植えた。`;
+    document.getElementById("note").textContent =
+      GROWTH_LOG[GROWTH_LOG.length - 1].note;
+  }
+
+  renderSky();
+  renderStars();
+  renderGarden();
+  renderStatus();
+</script>
+</body>
+</html>
