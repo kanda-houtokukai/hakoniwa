@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>箱庭 — デジタル盆栽</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="AIの庭師が毎日少しずつ手を入れる、育ち続けるデジタル盆栽。">
+<style>
+  :root{
+    --bg:#f4f1ea;
+    --ink:#3a352c;
+    --sub:#8a8375;
+    --card:#fffdf9;
+  }
+  *{ box-sizing:border-box; }
+  html,body{
+    margin:0; padding:0; min-height:100vh;
+    background:var(--bg); color:var(--ink);
+    font-family:"Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",serif;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:1.4rem; padding:3rem 1rem;
+  }
+  h1{
+    font-size:0.95rem; font-weight:500; letter-spacing:0.35em;
+    margin:0; color:var(--ink); text-indent:0.35em;
+  }
+  .stage{
+    background:var(--card); border-radius:6px;
+    box-shadow:0 2px 24px rgba(58,53,44,0.08);
+    padding:1.2rem;
+  }
+  #bonsai{ display:block; width:min(86vw,380px); height:auto; }
+  .caption{
+    font-size:0.8rem; color:var(--sub); text-align:center;
+    max-width:24rem; line-height:2; letter-spacing:0.03em;
+  }
+  .caption .note{ color:var(--ink); }
+  footer{ font-size:0.7rem; color:var(--sub); letter-spacing:0.1em; }
+  footer a{ color:var(--sub); }
+</style>
+</head>
+<body>
+  <h1>箱 庭</h1>
+  <div class="stage">
+    <svg id="bonsai" viewBox="0 0 480 560" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="デジタル盆栽"></svg>
+  </div>
+  <p class="caption" id="caption">読み込み中…</p>
+  <footer>デジタル盆栽 — 庭師が毎日少しずつ手を入れる</footer>
+
+<script>
+(async function () {
+  const svg = document.getElementById('bonsai');
+  const caption = document.getElementById('caption');
+  const NS = 'http://www.w3.org/2000/svg';
+
+  function el(tag, attrs) {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+
+  // FNV-1a based string hash -> stable numeric seed
+  function hashSeed(str) {
+    let h = 2166136261;
+    for (let i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  }
+
+  // deterministic PRNG (mulberry32)
+  function mulberry32(seed) {
+    let a = seed >>> 0;
+    return function () {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function seasonOf(month) {
+    if (month >= 3 && month <= 5)  return { foliage: ['#8bbf6a', '#a3cf82'] };
+    if (month >= 6 && month <= 8)  return { foliage: ['#3f7d3f', '#4f9450'] };
+    if (month >= 9 && month <= 11) return { foliage: ['#c9762e', '#b5442e'] };
+    return                                { foliage: ['#7a8a99', '#8fa0ad'] };
+  }
+
+  function drawPot(cx, rimY) {
+    const topW = 128, botW = 94, potH = 44;
+    const g = el('g', {});
+    const shadow = el('ellipse', {
+      cx, cy: rimY + potH + 6, rx: topW / 2 + 10, ry: 8,
+      fill: '#3a352c', opacity: 0.08,
+    });
+    const body = el('path', {
+      d: `M ${cx - topW / 2} ${rimY}
+          L ${cx - botW / 2} ${rimY + potH}
+          L ${cx + botW / 2} ${rimY + potH}
+          L ${cx + topW / 2} ${rimY} Z`,
+      fill: '#9c6b4f',
+    });
+    const shade = el('path', {
+      d: `M ${cx} ${rimY} L ${cx - botW / 2} ${rimY + potH} L ${cx + botW / 2} ${rimY + potH} Z`,
+      fill: '#6b4231', opacity: 0.3,
+    });
+    const rim = el('rect', {
+      x: cx - topW / 2 - 5, y: rimY - 9, width: topW + 10, height: 12,
+      rx: 2, fill: '#8a5a44',
+    });
+    const soil = el('ellipse', {
+      cx, cy: rimY - 5, rx: topW / 2 - 8, ry: 7, fill: '#3a2a1d',
+    });
+    g.append(shadow, body, shade, rim, soil);
+    return g;
+  }
+
+  function drawFoliage(g, x, y, radius, count, colors, rng) {
+    for (let i = 0; i < count; i++) {
+      const a = rng() * Math.PI * 2;
+      const d = rng() * radius * 0.7;
+      const r = radius * (0.45 + rng() * 0.4);
+      const c = el('circle', {
+        cx: x + Math.cos(a) * d,
+        cy: y + Math.sin(a) * d,
+        r,
+        fill: colors[i % colors.length],
+        opacity: 0.92,
+      });
+      g.appendChild(c);
+    }
+  }
+
+  function growBonsai(svg, log) {
+    const cx = 240, rimY = 400;
+    const count = log.length;
+    const latest = log[log.length - 1];
+    const latestMonth = new Date(latest.date).getMonth() + 1;
+    const season = seasonOf(latestMonth);
+    const seed = hashSeed(log.map(e => e.date).join('|'));
+    const rng = mulberry32(seed);
+
+    const trunkColor = '#5a4632';
+    const g = el('g', {});
+
+    // pot first (background layer)
+    g.appendChild(drawPot(cx, rimY));
+
+    const branches = el('g', {});
+    g.appendChild(branches);
+
+    function drawSegment(x1, y1, x2, y2, thick) {
+      const p = el('path', {
+        d: `M ${x1} ${y1} L ${x2} ${y2}`,
+        stroke: trunkColor, 'stroke-width': thick,
+        'stroke-linecap': 'round', fill: 'none',
+      });
+      branches.appendChild(p);
+    }
+
+    const depth = Math.min(1 + Math.floor(count / 7), 5);
+    const trunkLen = 36 + 14 * Math.sqrt(count);
+    const baseThick = 8 + Math.min(count, 40) * 0.15;
+
+    function branch(x, y, angle, length, thick, depthLeft) {
+      const rad = (angle * Math.PI) / 180;
+      const nx = x + Math.cos(rad) * length;
+      const ny = y + Math.sin(rad) * length;
+      drawSegment(x, y, nx, ny, thick);
+
+      if (depthLeft <= 0 || length < 9 || thick < 1.6) {
+        const leafCount = Math.min(2 + Math.floor(count / 3), 8);
+        const radius = 6 + Math.min(count, 30) * 0.35;
+        drawFoliage(branches, nx, ny, radius, leafCount, season.foliage, rng);
+        return;
+      }
+
+      const nChildren = depthLeft >= 2 ? (rng() < 0.6 ? 2 : 1) : 1;
+      for (let i = 0; i < nChildren; i++) {
+        const dev = (i === 0 ? -1 : 1) * (24 + rng() * 30);
+        branch(nx, ny, angle + dev, length * 0.68, thick * 0.68, depthLeft - 1);
+      }
+    }
+
+    // trunk: a few gently bent segments rising from the soil
+    let x = cx, y = rimY - 5, angle = -90 + (rng() * 8 - 4);
+    const segCount = count < 3 ? 1 : count < 10 ? 2 : 3;
+    let thick = baseThick;
+    let lastAngle = angle;
+    for (let s = 0; s < segCount; s++) {
+      angle += rng() * 20 - 10;
+      const segLen = trunkLen / segCount;
+      const rad = (angle * Math.PI) / 180;
+      const nx = x + Math.cos(rad) * segLen;
+      const ny = y + Math.sin(rad) * segLen;
+      drawSegment(x, y, nx, ny, thick);
+      x = nx; y = ny; thick *= 0.85; lastAngle = angle;
+    }
+
+    branch(x, y, lastAngle, trunkLen * 0.5, thick, depth);
+
+    svg.appendChild(g);
+
+    return { count, latest, season };
+  }
+
+  try {
+    const res = await fetch('growth-log.json', { cache: 'no-store' });
+    const log = await res.json();
+    log.sort((a, b) => a.date.localeCompare(b.date));
+    const { count, latest } = growBonsai(svg, log);
+    const first = log[0].date;
+    caption.innerHTML =
+      `${first} に種が植えられ、今日で <span class="note">${count}</span> 回の手入れ。<br>` +
+      `直近の記録（${latest.date}）: <span class="note">${latest.note}</span>`;
+  } catch (err) {
+    caption.textContent = '庭の記録を読み込めませんでした。';
+    console.error(err);
+  }
+})();
+</script>
+</body>
+</html>
