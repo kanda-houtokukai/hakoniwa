@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>庭 - hakoniwa</title>
+<style>
+  :root {
+    --sky-top: #bfe3f7;
+    --sky-bottom: #eaf7ec;
+    --ground-top: #8a6a4a;
+    --ground-bottom: #5f4630;
+    --stem: #3f7d3a;
+    --leaf: #5a9c4d;
+    --flower: #e8879c;
+    --flower-core: #f5d76e;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+    background: var(--sky-bottom);
+    color: #333;
+  }
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+  }
+  header {
+    text-align: center;
+    margin: 1.2em 0 0.4em;
+  }
+  h1 {
+    font-size: 1.1rem;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    color: #4a4033;
+    margin: 0;
+  }
+  #stage {
+    display: block;
+    width: min(92vw, 760px);
+    height: auto;
+    border-radius: 10px;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.12);
+  }
+  footer {
+    margin: 0.8em 0 1.4em;
+    font-size: 0.75rem;
+    color: #7a7365;
+    text-align: center;
+  }
+  .plant {
+    transform-origin: bottom center;
+    animation: sway 6s ease-in-out infinite;
+  }
+  @keyframes sway {
+    0%, 100% { transform: rotate(-1.2deg); }
+    50% { transform: rotate(1.2deg); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>箱庭</h1>
+</header>
+
+<svg id="stage" viewBox="0 0 800 420" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="育っていく庭">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="var(--sky-top)" />
+      <stop offset="100%" stop-color="var(--sky-bottom)" />
+    </linearGradient>
+    <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="var(--ground-top)" />
+      <stop offset="100%" stop-color="var(--ground-bottom)" />
+    </linearGradient>
+  </defs>
+
+  <rect x="0" y="0" width="800" height="420" fill="url(#sky)" />
+  <path d="M0,320 Q400,280 800,320 L800,420 L0,420 Z" fill="url(#ground)" />
+
+  <g id="garden"></g>
+</svg>
+
+<footer>
+  <span id="garden-note"></span>
+</footer>
+
+<script>
+/*
+ * この庭は「今日、実際に何日目か」で見た目が変わる、時間そのものが
+ * 育てる庭です。庭師(私)が毎日足すのは PLANTS 配列への一行だけ。
+ * あとは訪れる人のブラウザの現在時刻が、種から芽、若葉、成木、開花へと
+ * 静かに植物を育てます。
+ *
+ * PLANTS の各要素: { id, type, plantedOn: "YYYY-MM-DD", x: 0-800 }
+ * 将来の庭師は、この配列に新しい行を足すことで新しい植物を植えられます。
+ * type は今のところ "flower" のみ。将来増やしてよい。
+ */
+const PLANTS = [
+  { id: "seed-01", type: "flower", plantedOn: "2026-08-29", x: 400 },
+];
+
+const STAGE_MS = {
+  sprout: 0,
+  young: 3 * 86400000,
+  mature: 7 * 86400000,
+  bloom: 14 * 86400000,
+};
+
+function growthStage(ageMs) {
+  if (ageMs >= STAGE_MS.bloom) return "bloom";
+  if (ageMs >= STAGE_MS.mature) return "mature";
+  if (ageMs >= STAGE_MS.young) return "young";
+  return "sprout";
+}
+
+function stemPath(x, groundY, height) {
+  const topY = groundY - height;
+  const sway = height * 0.08;
+  return `M${x},${groundY} C${x - sway},${groundY - height * 0.6} ${x + sway},${topY + height * 0.4} ${x},${topY}`;
+}
+
+function leafPath(x, y, side, size) {
+  const dx = side * size;
+  return `M${x},${y} Q${x + dx},${y - size * 0.6} ${x + dx * 1.6},${y} Q${x + dx},${y + size * 0.4} ${x},${y}`;
+}
+
+function renderFlower(x, groundY, stage) {
+  const ns = "http://www.w3.org/2000/svg";
+  const g = document.createElementNS(ns, "g");
+  g.setAttribute("class", "plant");
+
+  const heights = { sprout: 14, young: 46, mature: 92, bloom: 128 };
+  const height = heights[stage];
+  const topY = groundY - height;
+
+  const stem = document.createElementNS(ns, "path");
+  stem.setAttribute("d", stemPath(x, groundY, height));
+  stem.setAttribute("stroke", "var(--stem)");
+  stem.setAttribute("stroke-width", stage === "sprout" ? 3 : 5);
+  stem.setAttribute("fill", "none");
+  stem.setAttribute("stroke-linecap", "round");
+  g.appendChild(stem);
+
+  if (stage !== "sprout") {
+    const leafCount = stage === "young" ? 1 : 2;
+    for (let i = 0; i < leafCount; i++) {
+      const leafY = groundY - height * (0.35 + i * 0.3);
+      const leaf = document.createElementNS(ns, "path");
+      leaf.setAttribute("d", leafPath(x, leafY, i % 2 === 0 ? -1 : 1, 16 + i * 4));
+      leaf.setAttribute("fill", "var(--leaf)");
+      g.appendChild(leaf);
+    }
+  }
+
+  if (stage === "bloom") {
+    const petals = 6;
+    for (let i = 0; i < petals; i++) {
+      const angle = (i / petals) * Math.PI * 2;
+      const px = x + Math.cos(angle) * 16;
+      const py = topY + Math.sin(angle) * 16;
+      const petal = document.createElementNS(ns, "ellipse");
+      petal.setAttribute("cx", px);
+      petal.setAttribute("cy", py);
+      petal.setAttribute("rx", 12);
+      petal.setAttribute("ry", 7);
+      petal.setAttribute("transform", `rotate(${(angle * 180) / Math.PI}, ${px}, ${py})`);
+      petal.setAttribute("fill", "var(--flower)");
+      g.appendChild(petal);
+    }
+    const core = document.createElementNS(ns, "circle");
+    core.setAttribute("cx", x);
+    core.setAttribute("cy", topY);
+    core.setAttribute("r", 8);
+    core.setAttribute("fill", "var(--flower-core)");
+    g.appendChild(core);
+  } else if (stage === "mature") {
+    const bud = document.createElementNS(ns, "circle");
+    bud.setAttribute("cx", x);
+    bud.setAttribute("cy", topY);
+    bud.setAttribute("r", 6);
+    bud.setAttribute("fill", "var(--flower)");
+    g.appendChild(bud);
+  } else if (stage === "sprout") {
+    for (const side of [-1, 1]) {
+      const leaf = document.createElementNS(ns, "path");
+      leaf.setAttribute("d", leafPath(x, groundY - 6, side, 8));
+      leaf.setAttribute("fill", "var(--leaf)");
+      g.appendChild(leaf);
+    }
+  }
+
+  return g;
+}
+
+function render() {
+  const garden = document.getElementById("garden");
+  garden.innerHTML = "";
+  const groundY = 330;
+  const now = Date.now();
+
+  let oldest = null;
+  for (const plant of PLANTS) {
+    const plantedAt = new Date(plant.plantedOn + "T00:00:00Z").getTime();
+    const ageMs = Math.max(0, now - plantedAt);
+    const stage = growthStage(ageMs);
+    if (plant.type === "flower") {
+      garden.appendChild(renderFlower(plant.x, groundY, stage));
+    }
+    const days = Math.floor(ageMs / 86400000);
+    if (oldest === null || days > oldest) oldest = days;
+  }
+
+  const note = document.getElementById("garden-note");
+  note.textContent = `植えてから ${oldest} 日目`;
+}
+
+render();
+</script>
+
+</body>
+</html>
