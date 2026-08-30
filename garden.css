@@ -1,0 +1,87 @@
+:root {
+  color-scheme: light;
+  --page-bg: #f4efe6;
+  --tray-rim: #c9ad84;
+  --tray-sand: #e9dfc8;
+  --rake-line: rgba(150, 122, 80, 0.35);
+  --soil: #8a6a46;
+  --stem: #4f7d43;
+  --leaf: #6fa356;
+  --ink: #6b5f4a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  background: var(--page-bg);
+  color: var(--ink);
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 2rem 1rem;
+}
+
+h1 {
+  font-size: 1.1rem;
+  font-weight: 400;
+  letter-spacing: 0.4em;
+  margin: 0;
+}
+
+.tray-wrap {
+  width: min(90vw, 800px);
+  filter: drop-shadow(0 12px 24px rgba(90, 70, 40, 0.15));
+}
+
+#tray {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 18px;
+  background: var(--tray-sand);
+}
+
+.tray-rim {
+  fill: none;
+  stroke: var(--tray-rim);
+  stroke-width: 6;
+}
+
+.rake-line {
+  fill: none;
+  stroke: var(--rake-line);
+  stroke-width: 1;
+}
+
+.soil-mound {
+  fill: var(--soil);
+  opacity: 0.85;
+}
+
+.stem {
+  fill: none;
+  stroke: var(--stem);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+
+.leaf {
+  fill: var(--leaf);
+}
+
+#meta {
+  font-size: 0.75rem;
+  letter-spacing: 0.15em;
+  opacity: 0.65;
+}

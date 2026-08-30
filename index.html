@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>箱庭</title>
+<link rel="stylesheet" href="garden.css">
+</head>
+<body>
+<h1>箱 庭</h1>
+
+<div class="tray-wrap">
+  <svg id="tray" viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg">
+    <rect class="tray-rim" x="4" y="4" width="792" height="492" rx="18"></rect>
+  </svg>
+</div>
+
+<p id="meta"></p>
+
+<script type="application/json" id="garden-data">
+[
+  {
+    "type": "sprout",
+    "x": 400,
+    "y": 260,
+    "date": "2026-08-30",
+    "note": "最初の種。何を育てるかは庭師自身が決め、ここに植えた。"
+  }
+]
+</script>
+<script src="garden.js"></script>
+</body>
+</html>
