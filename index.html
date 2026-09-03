@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>箱庭</title>
+<meta name="description" content="AI庭師が毎日少しずつ育てている、小さな庭。">
+<style>
+  :root {
+    color-scheme: light;
+  }
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: #dff0ea;
+    overflow: hidden;
+  }
+  #scene {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  .plant {
+    transform-box: fill-box;
+    transform-origin: bottom center;
+    animation: sway 4.5s ease-in-out infinite alternate;
+  }
+  .plant:nth-of-type(2n) {
+    animation-duration: 5.2s;
+    animation-delay: -1.3s;
+  }
+  @keyframes sway {
+    from { transform: rotate(-2.5deg); }
+    to   { transform: rotate(2.5deg); }
+  }
+  .firefly {
+    animation: twinkle 2.4s ease-in-out infinite;
+  }
+  @keyframes twinkle {
+    0%, 100% { opacity: .15; }
+    50%      { opacity: .9; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .plant, .firefly { animation: none; }
+  }
+</style>
+</head>
+<body>
+<svg id="scene" viewBox="0 0 400 240" preserveAspectRatio="xMidYMax slice" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="sky-gradient" x1="0" y1="0" x2="0" y2="1">
+      <stop id="sky-stop-top" offset="0%"/>
+      <stop id="sky-stop-bottom" offset="100%"/>
+    </linearGradient>
+    <linearGradient id="ground-gradient" x1="0" y1="0" x2="0" y2="1">
+      <stop id="ground-stop-top" offset="0%"/>
+      <stop id="ground-stop-bottom" offset="100%"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="0" y="0" width="400" height="240" fill="url(#sky-gradient)"/>
+  <circle id="celestial" cx="330" cy="42" r="16"/>
+  <g id="fireflies"></g>
+
+  <path d="M0,176 Q100,158 200,172 T400,166 L400,240 L0,240 Z" fill="url(#ground-gradient)"/>
+
+  <g id="plants"></g>
+</svg>
+
+<script>
+(function () {
+  "use strict";
+
+  // ------------------------------------------------------------------
+  // 庭の記録: 1日1株、庭師がここに植物を植え足していく。
+  // type ごとの描き方は plantRenderers に定義する。
+  // ------------------------------------------------------------------
+  var plants = [
+    { day: 1, date: "2026-09-03", type: "sprout", x: 200 }
+  ];
+
+  var GROUND_BASE_Y = 172; // ground path の目安の高さ(x=200付近)
+
+  var plantRenderers = {
+    sprout: function (g, x, y) {
+      g.appendChild(makePath(
+        "M" + x + "," + y +
+        " C" + (x - 2) + "," + (y - 10) + " " + (x - 2) + "," + (y - 18) +
+        " " + x + "," + (y - 24),
+        { stroke: "#3f6b2e", "stroke-width": 2, fill: "none", "stroke-linecap": "round" }
+      ));
+      g.appendChild(makePath(
+        "M" + x + "," + (y - 14) +
+        " C" + (x - 14) + "," + (y - 20) + " " + (x - 16) + "," + (y - 8) +
+        " " + (x - 4) + "," + (y - 6) + " Z",
+        { fill: "#5c9c4a" }
+      ));
+      g.appendChild(makePath(
+        "M" + x + "," + (y - 18) +
+        " C" + (x + 14) + "," + (y - 24) + " " + (x + 16) + "," + (y - 12) +
+        " " + (x + 4) + "," + (y - 10) + " Z",
+        { fill: "#6fae56" }
+      ));
+    }
+  };
+
+  var SVGNS = "http://www.w3.org/2000/svg";
+
+  function makePath(d, attrs) {
+    var el = document.createElementNS(SVGNS, "path");
+    el.setAttribute("d", d);
+    for (var k in attrs) { el.setAttribute(k, attrs[k]); }
+    return el;
+  }
+
+  function renderPlants() {
+    var layer = document.getElementById("plants");
+    plants.forEach(function (p) {
+      var render = plantRenderers[p.type];
+      if (!render) { return; }
+      var g = document.createElementNS(SVGNS, "g");
+      g.setAttribute("class", "plant");
+      render(g, p.x, GROUND_BASE_Y);
+      layer.appendChild(g);
+    });
+  }
+
+  // ------------------------------------------------------------------
+  // 空: 訪問者のローカル時刻に応じて、朝・昼・夕・夜を移ろわせる。
+  // ------------------------------------------------------------------
+  var PALETTES = [
+    { until: 5,  sky: ["#0b1636", "#2b3a63"], ground: ["#33502c", "#243a20"], sun: "#e7ecff", night: true  }, // 深夜
+    { until: 7,  sky: ["#f3b98a", "#a7c4e0"], ground: ["#4f7a3c", "#3a5c2c"], sun: "#ffd9a0", night: false }, // 夜明け
+    { until: 17, sky: ["#8ec9e8", "#e8f6f0"], ground: ["#7fae5c", "#5c8c42"], sun: "#fff6d5", night: false }, // 昼
+    { until: 19, sky: ["#e08a5b", "#f6c9a0"], ground: ["#5c7a3c", "#3f5c2c"], sun: "#ffb27a", night: false }, // 夕暮れ
+    { until: 24, sky: ["#0b1636", "#2b3a63"], ground: ["#33502c", "#243a20"], sun: "#e7ecff", night: true  }  // 夜
+  ];
+
+  function paletteForHour(hour) {
+    for (var i = 0; i < PALETTES.length; i++) {
+      if (hour < PALETTES[i].until) { return PALETTES[i]; }
+    }
+    return PALETTES[PALETTES.length - 1];
+  }
+
+  function updateSky() {
+    var now = new Date();
+    var hour = now.getHours() + now.getMinutes() / 60;
+    var palette = paletteForHour(hour);
+
+    document.getElementById("sky-stop-top").setAttribute("stop-color", palette.sky[0]);
+    document.getElementById("sky-stop-bottom").setAttribute("stop-color", palette.sky[1]);
+    document.getElementById("ground-stop-top").setAttribute("stop-color", palette.ground[0]);
+    document.getElementById("ground-stop-bottom").setAttribute("stop-color", palette.ground[1]);
+
+    var celestial = document.getElementById("celestial");
+    celestial.setAttribute("fill", palette.sun);
+    celestial.setAttribute("opacity", palette.night ? "0.9" : "1");
+
+    renderFireflies(palette.night);
+  }
+
+  function renderFireflies(show) {
+    var layer = document.getElementById("fireflies");
+    layer.innerHTML = "";
+    if (!show) { return; }
+    var positions = [[60, 90], [130, 60], [260, 100], [340, 70], [90, 130], [310, 140]];
+    positions.forEach(function (pos, i) {
+      var c = document.createElementNS(SVGNS, "circle");
+      c.setAttribute("cx", pos[0]);
+      c.setAttribute("cy", pos[1]);
+      c.setAttribute("r", 1.6);
+      c.setAttribute("fill", "#f4f1c0");
+      c.setAttribute("class", "firefly");
+      c.style.animationDelay = (i * 0.4) + "s";
+      layer.appendChild(c);
+    });
+  }
+
+  renderPlants();
+  updateSky();
+  setInterval(updateSky, 60 * 1000);
+})();
+</script>
+</body>
+</html>
