@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>箱庭</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #000;
+    font-family: -apple-system, "Hiragino Sans", "Yu Gothic", sans-serif;
+  }
+  #garden {
+    width: 100vw;
+    height: 100vh;
+  }
+  svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  .plant {
+    transform-origin: bottom center;
+    animation: sway 6s ease-in-out infinite;
+  }
+  .plant:nth-child(2n) { animation-duration: 7s; animation-delay: -1.5s; }
+  .plant:nth-child(3n) { animation-duration: 5.5s; animation-delay: -3s; }
+  @keyframes sway {
+    0%, 100% { transform: rotate(-1.2deg); }
+    50% { transform: rotate(1.2deg); }
+  }
+  .star {
+    animation: twinkle 3s ease-in-out infinite;
+  }
+  @keyframes twinkle {
+    0%, 100% { opacity: 0.2; }
+    50% { opacity: 1; }
+  }
+  #daycount {
+    position: absolute;
+    left: 12px;
+    bottom: 10px;
+    color: rgba(255,255,255,0.55);
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+    user-select: none;
+  }
+</style>
+</head>
+<body>
+<div id="garden">
+  <svg id="scene" viewBox="0 0 800 450" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop id="skyTop" offset="0%" stop-color="#0b1026"/>
+        <stop id="skyBottom" offset="100%" stop-color="#1a2140"/>
+      </linearGradient>
+    </defs>
+    <rect x="0" y="0" width="800" height="450" fill="url(#skyGrad)"/>
+    <g id="stars"></g>
+    <g id="sun"></g>
+    <g id="hills">
+      <path d="M0,320 Q200,270 400,310 T800,290 V450 H0 Z" fill="#2f4a2f"/>
+      <path d="M0,360 Q220,320 420,350 T800,335 V450 H0 Z" fill="#3d6144"/>
+      <path d="M0,400 Q250,375 450,395 T800,385 V450 H0 Z" fill="#4d7a53"/>
+    </g>
+    <g id="plants"></g>
+  </svg>
+</div>
+<div id="daycount"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ------------------------------------------------------------------
+  // この庭が最初に植えられた日。ここからの経過日数で花々が育つ。
+  // ------------------------------------------------------------------
+  var PLANT_EPOCH = new Date("2026-09-05T00:00:00");
+
+  function seededRandom(seed) {
+    // mulberry32
+    var t = seed >>> 0;
+    return function () {
+      t += 0x6D2B79F5;
+      var r = Math.imul(t ^ (t >>> 15), 1 | t);
+      r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
+      return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function hashString(str) {
+    var h = 0;
+    for (var i = 0; i < str.length; i++) {
+      h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
+    }
+    return h >>> 0;
+  }
+
+  function lerp(a, b, t) { return a + (b - a) * t; }
+
+  function hexToRgb(hex) {
+    var v = parseInt(hex.slice(1), 16);
+    return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
+  }
+
+  function rgbToHex(rgb) {
+    return "#" + rgb.map(function (c) {
+      return Math.round(Math.max(0, Math.min(255, c))).toString(16).padStart(2, "0");
+    }).join("");
+  }
+
+  function lerpColor(hexA, hexB, t) {
+    var a = hexToRgb(hexA), b = hexToRgb(hexB);
+    return rgbToHex([lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)]);
+  }
+
+  // 一日の空の表情。時刻(0-24)をキーにした色のキーフレーム。
+  var SKY_KEYS = [
+    { h: 0,  top: "#0b1026", bottom: "#1a2140" }, // 深夜
+    { h: 4,  top: "#0b1026", bottom: "#1a2140" },
+    { h: 5.5,top: "#3a3a63", bottom: "#c97b63" }, // 夜明け前
+    { h: 7,  top: "#7ea8d8", bottom: "#ffd8a8" }, // 朝
+    { h: 11, top: "#4a90d9", bottom: "#bfe3f7" }, // 昼
+    { h: 16, top: "#5b9bd9", bottom: "#ffe0b0" }, // 午後
+    { h: 18.5, top: "#3e5c8a", bottom: "#e8815a" }, // 夕暮れ
+    { h: 20, top: "#12163a", bottom: "#3a2a52" }, // 宵
+    { h: 22, top: "#0b1026", bottom: "#1a2140" },
+    { h: 24, top: "#0b1026", bottom: "#1a2140" }
+  ];
+
+  function skyColorsAt(hour) {
+    for (var i = 0; i < SKY_KEYS.length - 1; i++) {
+      var a = SKY_KEYS[i], b = SKY_KEYS[i + 1];
+      if (hour >= a.h && hour <= b.h) {
+        var t = (hour - a.h) / (b.h - a.h);
+        return { top: lerpColor(a.top, b.top, t), bottom: lerpColor(a.bottom, b.bottom, t) };
+      }
+    }
+    return { top: SKY_KEYS[0].top, bottom: SKY_KEYS[0].bottom };
+  }
+
+  // 夜の濃さ (0=昼, 1=夜) 。星と太陽/月の切り替えに使う。
+  function nightFactorAt(hour) {
+    if (hour <= 5.5 || hour >= 20) return 1;
+    if (hour >= 7 && hour <= 18.5) return 0;
+    if (hour > 5.5 && hour < 7) return 1 - (hour - 5.5) / (7 - 5.5);
+    return (hour - 18.5) / (20 - 18.5);
+  }
+
+  var svgNS = "http://www.w3.org/2000/svg";
+  function el(tag, attrs) {
+    var e = document.createElementNS(svgNS, tag);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+
+  function renderSky() {
+    var now = new Date();
+    var hour = now.getHours() + now.getMinutes() / 60;
+    var colors = skyColorsAt(hour);
+    document.getElementById("skyTop").setAttribute("stop-color", colors.top);
+    document.getElementById("skyBottom").setAttribute("stop-color", colors.bottom);
+
+    var night = nightFactorAt(hour);
+
+    // 太陽/月: 昼夜どちらの弧を歩んでいるかで進み具合と見た目を決める。
+    var sunGroup = document.getElementById("sun");
+    sunGroup.innerHTML = "";
+    var progress, cx, cy, body;
+    if (night < 1) {
+      // 昼の弧 (日の出 5.5 → 日の入 18.5)
+      progress = (hour - 5.5) / (18.5 - 5.5);
+      progress = Math.max(0, Math.min(1, progress));
+      cx = lerp(40, 760, progress);
+      cy = 340 - Math.sin(progress * Math.PI) * 300;
+      body = el("circle", { cx: cx, cy: cy, r: 26, fill: "#ffe9a8", opacity: 1 - night });
+      sunGroup.appendChild(body);
+      var glow = el("circle", { cx: cx, cy: cy, r: 42, fill: "#ffe9a8", opacity: (1 - night) * 0.25 });
+      sunGroup.insertBefore(glow, body);
+    }
+    if (night > 0) {
+      // 夜の弧 (日の入 18.5 → 翌日の出 5.5 を 0-1 に正規化)
+      var nh = hour >= 18.5 ? hour - 18.5 : hour + (24 - 18.5);
+      var span = 24 - (18.5 - 5.5);
+      progress = Math.max(0, Math.min(1, nh / span));
+      cx = lerp(40, 760, progress);
+      cy = 340 - Math.sin(progress * Math.PI) * 300;
+      var moon = el("circle", { cx: cx, cy: cy, r: 20, fill: "#eef1f8", opacity: night });
+      sunGroup.appendChild(moon);
+    }
+
+    // 星: 夜になるほど濃く瞬く
+    var starsGroup = document.getElementById("stars");
+    if (!starsGroup.childNodes.length) {
+      var rand = seededRandom(hashString("hakoniwa-stars"));
+      for (var i = 0; i < 60; i++) {
+        var s = el("circle", {
+          cx: rand() * 800,
+          cy: rand() * 260,
+          r: rand() * 1.4 + 0.3,
+          fill: "#ffffff",
+          class: "star",
+          style: "animation-delay:" + (rand() * 3).toFixed(2) + "s"
+        });
+        starsGroup.appendChild(s);
+      }
+    }
+    starsGroup.setAttribute("opacity", night);
+  }
+
+  // ------------------------------------------------------------------
+  // 植物: 植えられてからの経過日数に応じて、芽 → 茎 → 蕾 → 開花へ育つ。
+  // ------------------------------------------------------------------
+  var DAYS_PER_STAGE = 5;
+  var MAX_STAGE = 5;
+
+  function daysSincePlanted() {
+    var ms = new Date() - PLANT_EPOCH;
+    return Math.max(0, ms / 86400000);
+  }
+
+  function renderPlants() {
+    var totalDays = daysSincePlanted();
+    var group = document.getElementById("plants");
+    group.innerHTML = "";
+
+    var rand = seededRandom(hashString("hakoniwa-plants-v1"));
+    var count = 5;
+    for (var i = 0; i < count; i++) {
+      var baseX = 90 + i * ((800 - 180) / (count - 1)) + (rand() - 0.5) * 40;
+      var baseY = 420 + (rand() - 0.5) * 8;
+      var startOffset = rand() * 6; // 芽吹きの時期を少しずつずらす
+      var hue = Math.floor(rand() * 360);
+      var age = Math.max(0, totalDays - startOffset);
+      var stage = Math.min(MAX_STAGE, Math.floor(age / DAYS_PER_STAGE));
+      var stageProgress = Math.min(1, (age % DAYS_PER_STAGE) / DAYS_PER_STAGE);
+      if (stage === MAX_STAGE) stageProgress = 1;
+
+      group.appendChild(drawPlant(baseX, baseY, stage, stageProgress, hue, i));
+    }
+  }
+
+  function drawPlant(x, y, stage, stageProgress, hue, index) {
+    var g = el("g", { class: "plant" });
+
+    if (stage === 0 && stageProgress < 0.3) {
+      // まだ土の中、ほんの小さな芽
+      var sprout = el("path", {
+        d: "M" + x + "," + y + " q2,-6 5,-10",
+        stroke: "#5a8a4a",
+        "stroke-width": 2,
+        fill: "none",
+        "stroke-linecap": "round"
+      });
+      g.appendChild(sprout);
+      return g;
+    }
+
+    // 茎の高さは経過とともになめらかに伸び、最大到達後は横に緑を茂らせる
+    var growth = Math.min(1, (stage + stageProgress) / MAX_STAGE);
+    var stemHeight = 20 + growth * 95;
+    var sway = (index % 2 === 0 ? 1 : -1) * 10 * growth;
+    var topX = x + sway;
+    var topY = y - stemHeight;
+
+    var stem = el("path", {
+      d: "M" + x + "," + y + " Q" + (x + sway * 0.6) + "," + (y - stemHeight * 0.6) + " " + topX + "," + topY,
+      stroke: "#3d7a3d",
+      "stroke-width": 3,
+      fill: "none",
+      "stroke-linecap": "round"
+    });
+    g.appendChild(stem);
+
+    // 葉: stage 2 から
+    if (stage >= 2) {
+      var leafSize = 10 + growth * 6;
+      [0.35, 0.6].forEach(function (t, li) {
+        var lx = x + sway * t;
+        var ly = y - stemHeight * t;
+        var dir = li % 2 === 0 ? 1 : -1;
+        var leaf = el("ellipse", {
+          cx: lx + dir * leafSize * 0.6,
+          cy: ly,
+          rx: leafSize,
+          ry: leafSize * 0.45,
+          fill: "#4a9450",
+          transform: "rotate(" + (dir * 25) + " " + lx + " " + ly + ")"
+        });
+        g.appendChild(leaf);
+      });
+    }
+
+    // 蕾・花: stage 3 から
+    if (stage >= 3) {
+      var petalColor = "hsl(" + hue + ", 65%, 68%)";
+      var centerColor = "hsl(" + ((hue + 40) % 360) + ", 80%, 55%)";
+
+      if (stage === 3) {
+        // 蕾(まだ閉じている)
+        var bud = el("ellipse", {
+          cx: topX, cy: topY - 6, rx: 6, ry: 9,
+          fill: petalColor
+        });
+        g.appendChild(bud);
+      } else {
+        // 開花: stage 4 で小さく、5 で満開
+        var bloom = stage === 4 ? 0.55 + stageProgress * 0.45 : 1;
+        var petalLen = 12 * bloom;
+        var petalCount = stage === 4 ? 5 : 7;
+        for (var p = 0; p < petalCount; p++) {
+          var angle = (p / petalCount) * Math.PI * 2;
+          var petal = el("ellipse", {
+            cx: topX + Math.cos(angle) * petalLen,
+            cy: topY + Math.sin(angle) * petalLen,
+            rx: petalLen * 0.62,
+            ry: petalLen * 0.32,
+            fill: petalColor,
+            transform: "rotate(" + (angle * 180 / Math.PI) + " " + topX + " " + topY + ")"
+          });
+          g.appendChild(petal);
+        }
+        var center = el("circle", { cx: topX, cy: topY, r: 5 * bloom, fill: centerColor });
+        g.appendChild(center);
+      }
+    }
+
+    return g;
+  }
+
+  function renderDayCount() {
+    var days = Math.floor(daysSincePlanted());
+    document.getElementById("daycount").textContent = "🌱 " + days + " 日目の庭";
+  }
+
+  function render() {
+    renderSky();
+    renderPlants();
+    renderDayCount();
+  }
+
+  render();
+  // 空はゆっくり流れていく時刻とともに変化するので、1分ごとに描き直す
+  setInterval(render, 60 * 1000);
+})();
+</script>
+</body>
+</html>
