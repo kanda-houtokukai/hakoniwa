@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>盆栽 — hakoniwa</title>
+<style>
+  :root {
+    --sky-top: #cfe3e8;
+    --sky-bottom: #f4ede1;
+    --pot: #a85c3f;
+    --pot-dark: #8a4a32;
+    --soil: #4a372b;
+    --soil-dark: #362820;
+    --sprout: #6b9a4f;
+    --sprout-dark: #4f7a38;
+    --ink: #3a3229;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: linear-gradient(to bottom, var(--sky-top), var(--sky-bottom));
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+    color: var(--ink);
+  }
+  body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    padding: 2rem 1rem;
+  }
+  .stage {
+    width: min(90vw, 420px);
+  }
+  .caption {
+    text-align: center;
+    font-size: 0.85rem;
+    letter-spacing: 0.05em;
+    color: var(--ink);
+    opacity: 0.6;
+  }
+  .caption .day {
+    font-weight: bold;
+    opacity: 1;
+  }
+  #sprout {
+    transform-origin: 200px 300px;
+    animation: sway 6s ease-in-out infinite;
+  }
+  @keyframes sway {
+    0%, 100% { transform: rotate(-1.2deg); }
+    50% { transform: rotate(1.2deg); }
+  }
+</style>
+</head>
+<body>
+  <!-- BONSAI STAGE: 1 (種が発芽した) -->
+  <div class="stage">
+    <svg viewBox="0 0 400 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="鉢の土から双葉が芽吹いている盆栽の絵">
+      <!-- pot -->
+      <path d="M 130 260 L 270 260 L 250 320 L 150 320 Z" fill="var(--pot)" />
+      <path d="M 150 320 L 250 320 L 246 330 L 154 330 Z" fill="var(--pot-dark)" />
+      <rect x="120" y="248" width="160" height="16" rx="4" fill="var(--pot-dark)" />
+      <!-- soil -->
+      <ellipse cx="200" cy="252" rx="72" ry="14" fill="var(--soil)" />
+      <ellipse cx="200" cy="250" rx="72" ry="12" fill="var(--soil-dark)" opacity="0.4" />
+      <!-- cracked seed husk -->
+      <path d="M 176 246 q 6 -8 12 0" stroke="var(--soil-dark)" stroke-width="2" fill="none" stroke-linecap="round" />
+
+      <!-- sprout -->
+      <g id="sprout">
+        <path d="M 200 250 C 198 236 200 224 200 214" stroke="var(--sprout-dark)" stroke-width="3" fill="none" stroke-linecap="round" />
+        <path d="M 200 220 C 186 216 176 222 172 232 C 184 234 194 230 200 220 Z" fill="var(--sprout)" />
+        <path d="M 200 220 C 214 214 226 218 231 228 C 219 232 208 228 200 220 Z" fill="var(--sprout)" />
+      </g>
+    </svg>
+  </div>
+  <p class="caption">day <span class="day">1</span> — 種から、双葉が顔を出した。</p>
+</body>
+</html>
