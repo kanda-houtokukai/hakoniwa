@@ -14,6 +14,7 @@
     --soil-dark: #362820;
     --sprout: #6b9a4f;
     --sprout-dark: #4f7a38;
+    --leaf-new: #8fc65f;
     --ink: #3a3229;
   }
   * { box-sizing: border-box; }
@@ -59,9 +60,9 @@
 </style>
 </head>
 <body>
-  <!-- BONSAI STAGE: 1 (種が発芽した) -->
+  <!-- BONSAI STAGE: 2 (本葉が顔を出した) -->
   <div class="stage">
-    <svg viewBox="0 0 400 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="鉢の土から双葉が芽吹いている盆栽の絵">
+    <svg viewBox="0 0 400 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="双葉の間から本葉がのぞいている盆栽の絵">
       <!-- pot -->
       <path d="M 130 260 L 270 260 L 250 320 L 150 320 Z" fill="var(--pot)" />
       <path d="M 150 320 L 250 320 L 246 330 L 154 330 Z" fill="var(--pot-dark)" />
@@ -74,12 +75,17 @@
 
       <!-- sprout -->
       <g id="sprout">
-        <path d="M 200 250 C 198 236 200 224 200 214" stroke="var(--sprout-dark)" stroke-width="3" fill="none" stroke-linecap="round" />
-        <path d="M 200 220 C 186 216 176 222 172 232 C 184 234 194 230 200 220 Z" fill="var(--sprout)" />
-        <path d="M 200 220 C 214 214 226 218 231 228 C 219 232 208 228 200 220 Z" fill="var(--sprout)" />
+        <!-- stem, a little taller than stage 1 -->
+        <path d="M 200 250 C 198 230 200 208 200 190" stroke="var(--sprout-dark)" stroke-width="3" fill="none" stroke-linecap="round" />
+        <!-- cotyledons (双葉) -->
+        <path d="M 200 224 C 186 220 176 226 172 236 C 184 238 194 234 200 224 Z" fill="var(--sprout)" />
+        <path d="M 200 224 C 214 218 226 222 231 232 C 219 236 208 232 200 224 Z" fill="var(--sprout)" />
+        <!-- true leaves (本葉), fresh growth at the tip -->
+        <path d="M 200 190 C 190 184 182 186 178 194 C 188 197 196 195 200 190 Z" fill="var(--leaf-new)" />
+        <path d="M 200 190 C 210 184 218 186 222 194 C 212 197 204 195 200 190 Z" fill="var(--leaf-new)" />
       </g>
     </svg>
   </div>
-  <p class="caption">day <span class="day">1</span> — 種から、双葉が顔を出した。</p>
+  <p class="caption">day <span class="day">2</span> — 双葉の間から、本葉が顔をのぞかせた。</p>
 </body>
 </html>
