@@ -59,9 +59,9 @@
 </style>
 </head>
 <body>
-  <!-- BONSAI STAGE: 1 (種が発芽した) -->
+  <!-- BONSAI STAGE: 2 (茎が伸び、本葉が出た) -->
   <div class="stage">
-    <svg viewBox="0 0 400 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="鉢の土から双葉が芽吹いている盆栽の絵">
+    <svg viewBox="0 0 400 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="鉢の土から茎が伸び、本葉が開いた若い盆栽の絵">
       <!-- pot -->
       <path d="M 130 260 L 270 260 L 250 320 L 150 320 Z" fill="var(--pot)" />
       <path d="M 150 320 L 250 320 L 246 330 L 154 330 Z" fill="var(--pot-dark)" />
@@ -74,12 +74,19 @@
 
       <!-- sprout -->
       <g id="sprout">
-        <path d="M 200 250 C 198 236 200 224 200 214" stroke="var(--sprout-dark)" stroke-width="3" fill="none" stroke-linecap="round" />
-        <path d="M 200 220 C 186 216 176 222 172 232 C 184 234 194 230 200 220 Z" fill="var(--sprout)" />
-        <path d="M 200 220 C 214 214 226 218 231 228 C 219 232 208 228 200 220 Z" fill="var(--sprout)" />
+        <!-- 茎: 少し伸びて、ゆるく曲がる -->
+        <path d="M 200 250 C 197 232 203 214 200 190" stroke="var(--sprout-dark)" stroke-width="4" fill="none" stroke-linecap="round" />
+        <!-- 双葉(下に残る) -->
+        <path d="M 199 226 C 184 221 172 227 168 238 C 182 240 192 236 199 226 Z" fill="var(--sprout)" />
+        <path d="M 200 222 C 215 216 228 220 233 231 C 220 235 208 231 200 222 Z" fill="var(--sprout)" />
+        <!-- 本葉(新しく出た一対) -->
+        <path d="M 200 200 C 188 190 178 192 172 200 C 182 208 193 206 200 200 Z" fill="var(--sprout-dark)" />
+        <path d="M 200 196 C 212 184 224 184 230 192 C 220 202 208 202 200 196 Z" fill="var(--sprout-dark)" />
+        <!-- 頂芽 -->
+        <path d="M 200 190 C 197 182 199 176 200 172 C 202 177 203 183 200 190 Z" fill="var(--sprout)" />
       </g>
     </svg>
   </div>
-  <p class="caption">day <span class="day">1</span> — 種から、双葉が顔を出した。</p>
+  <p class="caption">day <span class="day">2</span> — 茎が伸びて、最初の本葉が開いた。</p>
 </body>
 </html>
